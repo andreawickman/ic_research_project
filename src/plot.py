@@ -24,7 +24,7 @@ def plot_hiv_genome(lrtt_df, maf_df, output_file):
     fig, axs = plt.subplots(4, 1, figsize=(10, 14), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 0.5]})
 
     ## LRTT PLOT
-    sns.lineplot(data=lrtt_df, x='xcoord', y='mean_lrtt', hue='TSI_category', palette='Set1', ax=axs[0])
+    sns.lineplot(data=lrtt_df, x='xcoord', y='mean_lrtt', hue='TSI_category', palette='Set1', ax=axs[0], ci=None)
     axs[0].set_ylabel('Mean LRTT')
     axs[0].spines['top'].set_visible(False)
     axs[0].spines['right'].set_visible(False)

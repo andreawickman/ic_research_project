@@ -43,16 +43,18 @@ def compute_MAF(df, codon_pos_one_two, codon_pos_three, tsi_intervals, tsi_strat
             else:
                 maf3c_mean = np.nan
 
-            temp_df = pd.DataFrame({
-                'Window_Start': [start],
-                'Window_End': [end],
-                'Window_Centre': [centre],
-                'MAF12c_Mean': [maf12c_mean],
-                'MAF3c_Mean': [maf3c_mean],
-                'TSI_category': [category]
-            })
+            for tsi_day in current_data['TSI_days'].unique():
+                temp_df = pd.DataFrame({
+                        'Window_Start': [start],
+                        'Window_End': [end],
+                        'Window_Centre': [centre],
+                        'MAF12c_Mean': [maf12c_mean],
+                        'MAF3c_Mean': [maf3c_mean],
+                        'TSI_category': [category],
+                        'TSI_days': [tsi_day]
+                    })
 
-            window_results.append(temp_df)
+                window_results.append(temp_df)
 
         if window_results:
             window_df = pd.concat(window_results, ignore_index=True)
