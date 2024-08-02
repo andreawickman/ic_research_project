@@ -1,0 +1,114 @@
+---
+title: "Untitled"
+author: "02509292"
+date: "2024-07-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rstan)
+library(bayesplot)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+theme_set(bayesplot::theme_default(base_family = "sans", base_size = 16))
+set1 <- RColorBrewer::brewer.pal(7, "Set1")
+SEED = 48927
+```
+
+## Read data
+
+```{r, echo = FALSE}
+data(mcycle, package="MASS")
+head(mcycle)
+
+```
+
+```{r, echo=FALSE}
+mcycle %>%
+  ggplot(aes(x=times,y=accel))+
+  geom_point()+
+  labs(x="Time (ms)", y="Acceleration (g)")
+```
+
+## Normalize Data
+
+```{r norm, echo=FALSE}
+# Function to normalize data
+normalize <- function(df) {
+  xmean <- mean(df$xcoord)
+  ymean <- mean(df$normalised.largest.rtt)
+  xsd <- sd(df$xcoord)
+  ysd <- sd(df$normalised.largest.rtt)
+  df <- df %>%
+    mutate(xn = (xcoord - xmean) / xsd,
+           yn = (normalised.largest.rtt - ymean) / ysd,
+           xmean = xmean, ymean = ymean, xsd = xsd, ysd = ysd)
+  return(df)
+}
+
+# Apply normalization to each RENAME_ID
+normalized_data <- lrtt_data %>%
+  group_by(RENAME_ID) %>%
+  group_modify(~normalize(.))
+
+```
+
+# Stan Code
+
+```{r stan_code, echo=FALSE}
+file1 <- "gp_norm.stan"
+writeLines(readLines(file1))
+```
+
+```{r}
+# Fit stan model
+stan_model <- stan_model(file = file1)
+# Data to be passed to Stan
+standata1 <- list(x = mcycle$times,
+                  y = mcycle$accel,
+                  N = length(mcycle$times),
+                  c_f = 1.5,  # factor c of basis functions for GP for f1
+                  M_f = 40,   # number of basis functions for GP for f1
+                  c_g = 1.5,  # factor c of basis functions for GP for g3
+                  M_g = 40    # number of basis functions for GP for g3
+)
+
+# Sample using dynamic HMC
+fit1 <- sampling(stan_model, data = standata1, warmup = 500, iter = 1000,
+                 chains = 4, seed = SEED, control = list(adapt_delta = 0.9))
+```
+
+```{r}
+print(fit1, pars = c('intercept', 'sigma_f', 'lengthscale_f', 'sigma_g', 'lengthscale_g'), probs = c(0.025, 0.5, 0.975))
+```
+
+```{r}
+# Convert draws to a data frame
+draws_df <- as.data.frame(fit1)
+
+# Calculate mean of the draws for f and sigma
+Ef <- colMeans(draws_df[, grep("^f\\[", colnames(draws_df))])
+sigma <- colMeans(draws_df[, grep("^sigma\\[", colnames(draws_df))])
+
+# Create prediction dataframe
+pred <- data.frame(Ef = Ef, sigma = sigma)
+
+# Combine with original data and plot
+cbind(mcycle, pred) %>%
+  ggplot(aes(x = times, y = accel)) +
+  geom_point() +
+  labs(x = "Time (ms)", y = "Acceleration (g)") +
+  geom_line(aes(y = Ef), color = set1[1]) +
+  geom_line(aes(y = Ef - 2 * sigma), color = set1[1], linetype = "dashed") +
+  geom_line(aes(y = Ef + 2 * sigma), color = set1[1], linetype = "dashed")
+
+
+# Check Rhat values for convergence
+rhat_values <- summary(fit1)$summary[, "Rhat"]
+print(rhat_values)
+
+# Plot trace plots
+traceplot(fit1, pars = c('intercept', 'sigma_f', 'lengthscale_f', 'sigma_g', 'lengthscale_g'))
+```
