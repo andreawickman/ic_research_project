@@ -13,6 +13,8 @@ def generate_lrtt_features(df, gag, pol, gp120, gp41, feature = 'normalised.larg
         # Genome-level average
         genome_lrtt = group['normalised.largest.rtt'].mean()
         genome_tips = group['tips'].mean()
+        genome_dual = group['solo.dual.count'].mean()
+        genome_reads = group['reads'].mean()
         
         # Gene-level averages
         gag_lrtt = group[group['xcoord'].isin(gag)][feature].mean()
@@ -24,6 +26,16 @@ def generate_lrtt_features(df, gag, pol, gp120, gp41, feature = 'normalised.larg
         pol_tips = group[group['xcoord'].isin(pol)]['tips'].mean()
         gp120_tips = group[group['xcoord'].isin(gp120)]['tips'].mean()
         gp41_tips = group[group['xcoord'].isin(gp41)]['tips'].mean()
+        
+        gag_dual = group[group['xcoord'].isin(gag)]['solo.dual.count'].mean()
+        pol_dual = group[group['xcoord'].isin(pol)]['solo.dual.count'].mean()
+        gp120_dual = group[group['xcoord'].isin(gp120)]['solo.dual.count'].mean()
+        gp41_dual = group[group['xcoord'].isin(gp41)]['solo.dual.count'].mean()
+
+        gag_reads = group[group['xcoord'].isin(gag)]['reads'].mean()
+        pol_reads = group[group['xcoord'].isin(pol)]['reads'].mean()
+        gp120_reads = group[group['xcoord'].isin(gp120)]['reads'].mean()
+        gp41_reads = group[group['xcoord'].isin(gp41)]['reads'].mean()
 
         #save tsi
         tsi_days = group['TSI_days'].iloc[0]
@@ -33,14 +45,24 @@ def generate_lrtt_features(df, gag, pol, gp120, gp41, feature = 'normalised.larg
             'TSI_days': tsi_days,
             'genome_lrtt': genome_lrtt,
             'genome_tips': genome_tips,
+            'genome_dual': genome_dual,
+            'genome_reads': genome_reads,
             'gag_lrtt': gag_lrtt,
             'gag_tips': gag_tips,
+            'gag_dual': gag_dual,
+            'gag_reads': gag_reads,
             'pol_lrtt': pol_lrtt,
             'pol_tips': pol_tips,
+            'pol_dual': pol_dual,
+            'pol_reads': pol_reads,
             'gp120_lrtt': gp120_lrtt,
             'gp120_tips': gp120_tips,
+            'gp120_dual': gp120_dual,
+            'gp120_reads': gp120_reads,
             'gp41_lrtt': gp41_lrtt,
-            'gp41_tips': gp41_tips
+            'gp41_tips': gp41_tips,
+            'gp41_dual': gp41_dual,
+            'gp41_reads': gp41_reads
         })
     
     return pd.DataFrame(results)

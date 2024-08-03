@@ -4,14 +4,19 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.feature_selection import RFECV
 
-def run_forest_class(X_train, y_train, X_test, y_test, predictors, n_estimators=100, random_state=42):
+def run_forest_class(X_train, y_train, X_test, y_test, predictors, n_estimators=100, max_depth = None, min_samples_leaf = 1, min_samples_split = 2, max_features = 'sqrt', random_state=42):
     # Select the predictor columns
     X_train_subset = X_train[predictors]
     X_test_subset = X_test[predictors]
 
     #DEFINE RANDOM FOREST CLASSIFIER INSTANCE   
     rf = RandomForestClassifier(n_estimators=n_estimators, 
-                                random_state=random_state)
+                                random_state= random_state,
+                                max_depth = max_depth,
+                                max_features = max_features,
+                                min_samples_leaf= min_samples_leaf,
+                                min_samples_split= min_samples_split)
+    
     #FIT RANDOM FOREST CLASSIFIER ON TRAINING DATA 
     rf.fit(X_train_subset, y_train)
     #MAKE PREDICTIONS ON TEST DATA
