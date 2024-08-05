@@ -25,3 +25,20 @@ def stratify4(df):
     df['TSI_category'] = np.select(intervals, categories, default=np.nan)
     df['TSI_category'] = pd.Categorical(df['TSI_category'], categories=categories, ordered=True)
     return df
+
+def batch_process(data, batch_size, imputer, scaler):
+    n_batches = int(np.ceil(data.shape[0] / batch_size))
+    imputed_data = []
+    
+    for i in range(n_batches):
+        start_idx = i * batch_size
+        end_idx = min((i + 1) * batch_size, data.shape[0])
+        batch_data = data[start_idx:end_idx]
+        
+        scaled_batch_data = scaler.transform(batch_data)
+        imputed_batch_data = imputer.fit_transform(scaled_batch_data)
+        imputed_batch_data_original_scale = scaler.inverse_transform(imputed_batch_data)
+        
+        imputed_data.append(imputed_batch_data_original_scale)
+    
+    return np.vstack(imputed_data)
