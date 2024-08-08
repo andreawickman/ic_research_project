@@ -100,7 +100,7 @@ cbind(standata_sample, pred) %>%
   ggplot(aes(x = x, y = y)) +
   geom_point() +
   labs(x = "Genome Coordinate", y = "LRTT") +
-  geom_line(aes(y = Ef), color = set1[1]) + 
+  geom_line(aes(y = Ef), color = set1[1]) +
   geom_line(aes(y = Ef - 2 * sigma), color = set1[1], linetype = "dashed") +
   geom_line(aes(y = Ef + 2 * sigma), color = set1[1], linetype = "dashed")
 ```
@@ -113,8 +113,8 @@ rhat_values <- summary(fit_sample)$summary[, "Rhat"]
 print(rhat_values)
 
 # Plot trace plots
-traceplot(fit_sample, pars = c('intercept', 'sigma_f', 'lengthscale_f', 'sigma_g', 'lengthscale_g'))
+traceplot(fit_sample, pars = c('intercept', 'sigma_f', 'lengthscale_f'))
 
 # Plot pairs plot for diagnostics
-pairs(fit_sample, pars = c('intercept', 'sigma_f', 'lengthscale_f', 'sigma_g', 'lengthscale_g'))
+pairs(fit_sample, pars = c('intercept', 'sigma_f', 'lengthscale_f'))
 ```

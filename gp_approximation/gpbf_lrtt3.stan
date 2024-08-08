@@ -12,8 +12,8 @@ data {
   vector[N] x;            // univariate covariate
   vector<lower=0>[N] y;   // target variable (must be > 0)
   
-  real<lower=0> c_f;   // factor c to determine the boundary value L
-  int<lower=1> M_f;    // number of basis functions
+  real<lower=0> c_f;      // factor c to determine the boundary value L
+  int<lower=1> M_f;       // number of basis functions
 }
 
 transformed data {
@@ -28,40 +28,17 @@ transformed data {
   // Basis functions for f
   real L_f = c_f * max(xn);
   matrix[N, M_f] PHI_f = PHI_EQ(N, M_f, L_f, xn);
-  
-  // Basis functions for g
-  real L_g = c_g * max(xn);
-  matrix[N, M_g] PHI_g = PHI_EQ(N, M_g, L_g, xn);
 }
+
 parameters {
   real<lower=0.01> intercept;  // Ensure intercept is positive
-  vector[M_f] beta_f;       // Basis functions coefficients
-  vector[M_g] beta_g;       // Basis functions coefficients
-  real<lower=0.01> lengthscale_f; // Ensure positive lengthscale
-  real<lower=0.01> sigma_f;       // Ensure positive scale
-  real<lower=0.01> lengthscale_g; // Ensure positive lengthscale
-  real<lower=0.01> sigma_g;       // Ensure positive scale
-}
-transformed data {
-  // Normalize data
-  real xmean = mean(x);
-  real ymean = mean(y); // Mean of y
-  real xsd = sd(x);
-  real ysd = sd(y); // Standard deviation of y
-  vector[N] xn = (x - xmean) / xsd;
-  vector[N] yn = (y - ymean) / ysd; // Standardize y
-  
-  // Basis functions for f
-  real L_f = c_f * max(xn);
-  matrix[N, M_f] PHI_f = PHI_EQ(N, M_f, L_f, xn);
-}
-parameters {
-  real<lower=0.01> intercept;  // Ensure intercept is positive
-  vector[M_f] beta_f;       // Basis functions coefficients
+  vector[M_f] beta_f;          // Basis functions coefficients
   real<lower=0.01> lengthscale_f; // Ensure positive lengthscale
   real<lower=0.01> sigma_f;       // Ensure positive scale
   real<lower=0> phi;             // Dispersion parameter
+  real<lower=0> beta;
 }
+
 transformed parameters {
   vector[N] mu;
 
@@ -70,6 +47,7 @@ transformed parameters {
 
   mu = intercept + PHI_f * (diagSPD_f .* beta_f);
 }
+
 model {
   // Priors
   intercept ~ normal(1, 1);  // Adjusted to ensure positive values
@@ -79,15 +57,18 @@ model {
   phi ~ lognormal(0, 1);    // Ensure positive dispersion parameter
   
   // Likelihood using gamma distribution
-  y ~ gamma(mu ./ phi, phi);
+  y ~ gamma(mu * beta, phi);
 }
+
 generated quantities {
   vector[N] f;
   vector[N] sigma;
   
   {
-    // Function scaled back to the original scale
+    // change spectral density 
+    vector[M_f] diagSPD_f = diagSPD_EQ(sigma_f, lengthscale_f, L_f, M_f);
+    // Function scaled back to the original scale - change
     f = mu * ysd + ymean;
-    sigma = phi * ysd;
+    sigma = rep_vector(phi * ysd, N);
   }
 }
