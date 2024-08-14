@@ -1,4 +1,4 @@
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedKFold, KFold
@@ -50,9 +50,11 @@ def feature_selection_and_plot(X_train, y_train, model_type, output_path):
     if model_type == RandomForestClassifier:
         cv = StratifiedKFold(n_splits=10)
         scoring = 'accuracy'
-    else:
+    elif model_type == RandomForestRegressor:
         cv = KFold(n_splits=10)
         scoring = 'r2'
+    else:
+        raise ValueError("Unsupported model type")
 
     # Use RFECV to perform feature selection with cross-validation
     rfe = RFECV(estimator=rf, step=1, cv=cv, scoring= scoring, n_jobs=-1)
