@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 
+#For 5-Class Classification System
 def stratify5(df):
+    #define intervals for 5 classes
     intervals = [
         df['TSI_days'] <= 180.0,
         (df['TSI_days'] > 180.0) & (df['TSI_days'] <= 365.0),
@@ -10,11 +12,14 @@ def stratify5(df):
         df['TSI_days'] > 1460.0
     ]
     categories = ['0m-6m', '6m-12m', '12m-24m', '2y-4y', '4y+']
+    #add class column
     df['TSI_category'] = np.select(intervals, categories, default=np.nan)
     df['TSI_category'] = pd.Categorical(df['TSI_category'], categories=categories, ordered=True)
     return df
 
+#For 4-Class Classification System
 def stratify4(df):
+    #define intervals for 4 classes
     intervals = [
         df['TSI_days'] <= 180.0,
         (df['TSI_days'] > 180.0) & (df['TSI_days'] <= 365.0),
@@ -22,10 +27,12 @@ def stratify4(df):
         df['TSI_days'] > 1460.0
     ]
     categories = ['0m-6m', '6m-12m', '1y-4y', '4y+']
+    #add class column
     df['TSI_category'] = np.select(intervals, categories, default=np.nan)
     df['TSI_category'] = pd.Categorical(df['TSI_category'], categories=categories, ordered=True)
     return df
 
+#function for batch-processing the imputation process
 def batch_process(data, batch_size, imputer, scaler):
     n_batches = int(np.ceil(data.shape[0] / batch_size))
     imputed_data = []

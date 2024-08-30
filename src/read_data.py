@@ -2,13 +2,8 @@ import pyreadr
 import pandas as pd
 import numpy as np
 
+#Function to read the raw data stored in RDS files
 def read_datasets(): 
-    """
-    Reads the specified RDS and CSV files and returns the data as pandas DataFrames.
-    
-    Returns:
-        dict: A dictionary containing the DataFrames with keys as the file descriptors.
-    """ 
     file_paths = {
         'agg_data': './data/raw/BW_tshedimoso_TSI.RDS',
         'phylo_features': './data/raw/BW_tshedimoso_phylo_patstats.RDS',
@@ -36,7 +31,7 @@ def read_datasets():
     }
     return data_frames
 
-
+#function to merge the two phylogenetic datasets
 def merge_phylo_data(botswana_data, rakai_data):
 
     common_columns = ['TSI_days', 'tree.id', 'xcoord', 'tips', 'reads', 'subgraphs', 'clades',
@@ -53,12 +48,11 @@ def merge_phylo_data(botswana_data, rakai_data):
 
     #rename for consistency
     rakai_data = rakai_data.rename(columns={'host.id': 'RENAME_ID'})
-
     botswana_data.loc[:, 'RENAME_ID'] = botswana_data['RENAME_ID'].astype(str)
     rakai_data.loc[:, 'RENAME_ID'] = rakai_data['RENAME_ID'].astype(str)
 
+    #convert numeric variables to float 
     columns_to_convert_to_float = ['TSI_days', 'xcoord', 'tips', 'reads', 'subgraphs', 'clades', 'solo.dual.count']
-
     for col in columns_to_convert_to_float:
         botswana_data.loc[:, col] = botswana_data[col].astype(float)
         rakai_data.loc[:, col] = rakai_data[col].astype(float)
@@ -95,6 +89,7 @@ def load_reference_data(modeldir):
 
     return first_second_codon_pos, third_codon_pos
 
+#Expanded version of the previous function to include key viral region coordinates
 def load_reference_data2(modeldir):
     ''' Load HXB2 data.'''
     #  HXB2 positions
@@ -117,11 +112,11 @@ def load_reference_data2(modeldir):
     rf2_12 = set(hxb2.groupby(['RF2 protein', 'RF2 aa position'])['HXB2 base position'].nsmallest(2).reset_index()['HXB2 base position'])
     rf3_12 = set(hxb2.groupby(['RF3 protein', 'RF3 aa position'])['HXB2 base position'].nsmallest(2).reset_index()['HXB2 base position'])
     
-    # Summarise
+    #summarise
     first_second_codon_pos = set(rf1_12 | rf2_12 | rf3_12)
     third_codon_pos = set(t1 | t2 | t3) - first_second_codon_pos
     
-    # Genes
+    #Key Genes
     gp120 = hxb2[hxb2['RF3 protein'] == 'gp120'].index
     gp41 = hxb2[hxb2['RF3 protein'] == 'gp41'].index
     gag = hxb2[hxb2['RF1 protein'] == 'gag'].index

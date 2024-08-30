@@ -8,7 +8,7 @@ def compute_MAF(df, codon_pos_one_two, codon_pos_three, tsi_intervals, tsi_strat
         categories=tsi_strata, 
         ordered=True
     )
-    
+    #window-level specifications
     start_pos = 950
     end_pos = 9650
     window_size = 250
@@ -20,7 +20,6 @@ def compute_MAF(df, codon_pos_one_two, codon_pos_three, tsi_intervals, tsi_strat
         end = start + window_size
         #center of window
         centre = (start + end)/2
-        
         #coordinates of each window 
         window_range = list(map(str, range(start, end)))
 

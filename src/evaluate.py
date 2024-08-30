@@ -1,11 +1,12 @@
 import numpy as np
-import os 
 import pandas as pd
+import os 
+
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import r2_score, accuracy_score, mean_squared_error, mean_absolute_error
+from sklearn.metrics import r2_score, accuracy_score, mean_squared_error, mean_absolute_error, precision_score, f1_score, recall_score
 
-
+# Function to compute class-wise accuracies for multi-class classification model 
 def calculate_class_accuracies(train_features, predictors):
     class_accuracies = {}
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -52,15 +53,10 @@ def calculate_r2_scores(train_features, predictors):
     
     return mean_r2, r2_ci
 
-def evaluate_model(input_dir, feature_set_name, features, output_csv=None):
-    # Number of folds
-    n_folds = 5
-
+def evaluate_model(input_dir, feature_set_name, features, output_csv=None, n_folds = 5):
     # Initialize lists to store all predictions and true values across all folds
     all_y_true = []
     all_y_pred = []
-
-    # Initialize list to store fold-wise metrics
     fold_metrics = []
 
     # Loop through each fold
@@ -73,21 +69,20 @@ def evaluate_model(input_dir, feature_set_name, features, output_csv=None):
         y_train = np.log1p(train['TSI_days'] / 365)
         y_test = np.log1p(test['TSI_days'] / 365)
 
-        # Specified feature set
+        # Define training and test set using specified feature set
         X_train = train[features]
         X_test = test[features]
 
+        #fit model
         model = RandomForestRegressor(random_state=42)
         model.fit(X_train, y_train)
         
-        # Predict on the test data
+        # Predict on test data
         y_pred = model.predict(X_test)
+        all_y_true.extend(y_test) #store true values
+        all_y_pred.extend(y_pred) #store estimated values
         
-        # Store the true values and predictions
-        all_y_true.extend(y_test)
-        all_y_pred.extend(y_pred)
-        
-        # Calculate and store metrics for the current fold
+        #compute and store metrics
         mse = mean_squared_error(y_test, y_pred)
         mae = mean_absolute_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
@@ -101,23 +96,19 @@ def evaluate_model(input_dir, feature_set_name, features, output_csv=None):
             'R²': r2
         })
 
-    # Convert lists to numpy arrays
     all_y_true = np.array(all_y_true)
     all_y_pred = np.array(all_y_pred)
 
-    # Calculate overall performance metrics across all folds
+    #Compute overall performance metrics across all folds
     overall_mse = mean_squared_error(all_y_true, all_y_pred)
     overall_mae = mean_absolute_error(all_y_true, all_y_pred)
     overall_r2 = r2_score(all_y_true, all_y_pred)
 
-    # Print the overall performance metrics
     print("\nOverall Performance across all folds:")
-
     print(f"Overall MSE: {overall_mse}")
     print(f"Overall MAE: {overall_mae}")
     print(f"Overall R²: {overall_r2}")
     
-    # Add overall metrics to the DataFrame
     fold_metrics.append({
         'Feature_Set': feature_set_name, 
         'Fold': 'Overall',
@@ -133,3 +124,126 @@ def evaluate_model(input_dir, feature_set_name, features, output_csv=None):
         print(f"Performance metrics saved to {output_csv}")
 
     return metrics_df
+
+def evaluate_model_with_errors(input_dir, feature_set_name, features, n_folds=10): 
+    all_y_true = []
+    all_y_pred = []
+    all_prediction_intervals = []
+    fold_metrics = []
+
+    # Loop through each fold
+    for fold in range(1, n_folds + 1):
+        # Load training and test set
+        train = pd.read_csv(os.path.join(input_dir, f'training_data_fold{fold}.csv'))
+        test = pd.read_csv(os.path.join(input_dir, f'test_data_fold{fold}.csv'))
+        
+        # Convert to log years
+        y_train = np.log1p(train['TSI_days'] / 365)
+        y_test = np.log1p(test['TSI_days'] / 365)
+        #specify train and test set using specified feature set
+        X_train = train[features]
+        X_test = test[features]
+
+        #defined and fit/train model
+        model = RandomForestRegressor(random_state=42)
+        model.fit(X_train, y_train)
+        
+        # Predict on the test data
+        y_pred = model.predict(X_test)
+        all_y_true.extend(y_test) #store true values
+        all_y_pred.extend(y_pred) #store predicted values
+        
+        #calculate and store metrics for the current fold
+        mse = mean_squared_error(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        print(f"Fold {fold}: MSE = {mse}, MAE = {mae}, R² = {r2}")
+        
+        fold_metrics.append({
+            'Feature_Set': feature_set_name, 
+            'Fold': fold,
+            'MSE': mse,
+            'MAE': mae,
+            'R²': r2
+        })
+        prediction_errors = np.abs(y_test - y_pred)
+        error_model = RandomForestRegressor(random_state=42)
+        error_model.fit(X_test, prediction_errors)
+
+        # Predict the error intervals for the test set
+        prediction_intervals = error_model.predict(X_test)
+        all_prediction_intervals.extend(prediction_intervals)
+
+    # Convert lists to numpy arrays
+    all_y_true = np.array(all_y_true)
+    all_y_pred = np.array(all_y_pred)
+    all_prediction_intervals = np.array(all_prediction_intervals)
+
+    metrics_df = pd.DataFrame(fold_metrics)
+
+    return metrics_df, all_y_true, all_y_pred, all_prediction_intervals
+
+def evaluate_multiclass_model(input_dir, feature_set_name, features, n_folds=10):
+    all_y_true = []
+    all_y_pred = []
+    fold_metrics = []
+
+    # Loop through each fold
+    for fold in range(1, n_folds + 1):
+        # Load training and test set
+        train = pd.read_csv(os.path.join(input_dir, f'training_data_fold{fold}.csv'))
+        test = pd.read_csv(os.path.join(input_dir, f'test_data_fold{fold}.csv'))
+        
+        y_train = train['TSI_category']  
+        y_test = test['TSI_category']
+
+        # Specified feature set
+        X_train = train[features]
+        X_test = test[features]
+
+        #fit and train model
+        model = RandomForestClassifier(random_state=42)
+        model.fit(X_train, y_train)
+        
+        # Generate predictions
+        y_pred = model.predict(X_test)
+        all_y_true.extend(y_test) #store true values
+        all_y_pred.extend(y_pred) #store predicted values
+        
+        #compute performance metrics 
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred, average='weighted')
+        recall = recall_score(y_test, y_pred, average='weighted')
+        f1 = f1_score(y_test, y_pred, average='weighted')
+
+        print(f"Fold {fold}: Accuracy = {accuracy}, Precision = {precision}, Recall = {recall}, F1 = {f1}")
+        
+        fold_metrics.append({
+            'Feature_Set': feature_set_name, 
+            'Fold': fold,
+            'Accuracy': accuracy,
+            'Precision': precision,
+            'Recall': recall,
+            'F1_Score': f1
+        })
+
+    
+    all_y_true = np.array(all_y_true)
+    all_y_pred = np.array(all_y_pred)
+
+    # Calculate overall performance metrics across all folds
+    overall_accuracy = accuracy_score(all_y_true, all_y_pred)
+    overall_precision = precision_score(all_y_true, all_y_pred, average='weighted')
+    overall_recall = recall_score(all_y_true, all_y_pred, average='weighted')
+    overall_f1 = f1_score(all_y_true, all_y_pred, average='weighted')
+
+    # Print overall performance metrics
+    print("\nOverall Performance across all folds:")
+    print(f"Overall Accuracy: {overall_accuracy}")
+    print(f"Overall Precision: {overall_precision}")
+    print(f"Overall Recall: {overall_recall}")
+    print(f"Overall F1 Score: {overall_f1}")
+    
+    metrics_df = pd.DataFrame(fold_metrics)
+
+    return metrics_df, all_y_true, all_y_pred
